@@ -15,7 +15,8 @@ as.
 frontend/    React + Vite SPA
 backend/     FastAPI service (SQLAlchemy ORM, SQLite/Postgres)
 openapi.yaml API contract the frontend and backend both implement
-docker-compose.yml   Postgres, backend, and frontend containers
+docker-compose.yml       Prod: Postgres + backend (serves the built frontend)
+docker-compose.dev.yml   Dev: Postgres + hot-reload backend + Vite frontend
 Makefile     Shortcuts for everything below
 _docs/spec.md   Original product scope
 ```
@@ -87,23 +88,38 @@ DATABASE_URL=postgresql://ledger:ledger@localhost:5432/ledger
 
 ## Running everything in Docker
 
-Builds and runs Postgres + backend + frontend as containers:
+Two separate Compose files, since dev and prod run different topologies (a
+hot-reload backend + a separate Vite dev server, vs. one image that serves
+both) — see [`STEPS.md`](STEPS.md) for why.
+
+**Prod** (`docker-compose.yml`, `backend/Dockerfile`): the backend image
+builds the frontend and serves the static build itself, so there's a single
+app container.
 
 ```bash
-make docker-up     # build + start the full stack
+make docker-up     # build + start postgres + backend
 make docker-down   # stop it
 make docker-logs   # tail logs
 ```
 
-- Frontend: **http://localhost:8080**
+- App (frontend + API): **http://localhost:8000** (`/docs`, `/healthz`)
+
+**Dev** (`docker-compose.dev.yml`, `*/Dockerfile.dev`): backend runs with
+`--reload` and the frontend runs the Vite dev server, both bind-mounting
+your source so containers pick up edits without a rebuild.
+
+```bash
+make docker-up-dev     # build + start postgres + backend + frontend
+make docker-down-dev   # stop it
+make docker-logs-dev   # tail logs
+```
+
+- Frontend: **http://localhost:5173**
 - Backend: **http://localhost:8000** (`/docs`, `/healthz`)
 
-The containerized backend always talks to the `postgres` container; the
-containerized frontend is served by nginx, which proxies `/api/*` to the
-backend the same way the Vite dev server does.
-
 To run just a Postgres container for local (non-Docker) dev, use
-`make db-up` / `make db-down` instead.
+`make db-up` / `make db-down` instead — this now points at
+`docker-compose.dev.yml`.
 
 ## Scope
 
