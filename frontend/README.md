@@ -15,7 +15,9 @@ npm run dev
 
 Requires the backend running at `http://127.0.0.1:8000` (`../backend`,
 or `make backend` from the repo root) — `vite.config.js` proxies `/api/*`
-requests to it.
+requests to it. Set `VITE_BACKEND_URL` to override that target (used by
+`docker-compose.dev.yml`, where the backend is a separate container, not
+localhost).
 
 ## What's here
 

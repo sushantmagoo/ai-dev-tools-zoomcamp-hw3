@@ -14,6 +14,7 @@ as.
 ```
 frontend/    React + Vite SPA
 backend/     FastAPI service (SQLAlchemy ORM, SQLite/Postgres)
+e2e/         Playwright end-to-end tests, run against docker-compose.dev.yml
 openapi.yaml API contract the frontend and backend both implement
 docker-compose.yml       Prod: Postgres + backend (serves the built frontend)
 docker-compose.dev.yml   Dev: Postgres + hot-reload backend + Vite frontend
@@ -31,7 +32,9 @@ make dev       # runs backend (:8000) and frontend (:5173) together
 ```
 
 Open **http://localhost:5173**. `Ctrl+C` stops both servers. Run `make help`
-to see every available command, or `make test` to run both test suites.
+to see every available command, or `make test` to run both test suites
+(unit-level only — see [End-to-end tests](#end-to-end-tests) below for the
+Docker-based integration suite).
 
 ## Frontend
 
@@ -120,6 +123,18 @@ make docker-logs-dev   # tail logs
 To run just a Postgres container for local (non-Docker) dev, use
 `make db-up` / `make db-down` instead — this now points at
 `docker-compose.dev.yml`.
+
+## End-to-end tests
+
+`e2e/` holds a Playwright suite that runs against a real, running
+`docker-compose.dev.yml` stack (real browser, real Vite proxy, real
+FastAPI, real Postgres) — see [`e2e/README.md`](e2e/README.md) for what it
+covers and why it's separate from the unit-level suites above.
+
+```bash
+make e2e-install   # one-time: npm install + download the Playwright browser
+make e2e           # reset the dev stack, run the suite, tear it down
+```
 
 ## Scope
 
