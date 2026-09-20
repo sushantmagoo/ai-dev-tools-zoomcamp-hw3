@@ -19,6 +19,7 @@ e2e/               Playwright end-to-end tests, run against docker-compose.dev.y
 openapi.yaml       API contract the frontend and backend both implement
 docker-compose.yml       Prod: Postgres + backend (serves the built frontend)
 docker-compose.dev.yml   Dev: Postgres + hot-reload backend + Vite frontend
+infra/cloudformation/    AWS deployment (CloudFormation + EC2) — see STEPS.md
 Makefile           Shortcuts for everything below
 _docs/spec.md      Original product scope
 _docs/testing.md   How the four test layers fit together
