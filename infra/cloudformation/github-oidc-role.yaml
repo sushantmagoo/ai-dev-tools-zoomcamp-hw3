@@ -81,7 +81,13 @@ Resources:
           - Effect: Allow
             Principal:
               Federated: !Sub arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
-            Action: sts:AssumeRoleWithWebIdentity
+            Action:
+              # aws-actions/configure-aws-credentials attaches session tags
+              # (repo, ref, actor, etc.) by default, which needs its own
+              # grant here or the whole call is rejected with a misleading
+              # "not authorized to perform sts:AssumeRoleWithWebIdentity".
+              - sts:AssumeRoleWithWebIdentity
+              - sts:TagSession
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
