@@ -92,9 +92,13 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
+                # GitHub can append immutable owner/repo ids to the sub claim
+                # (repo:org@ID/repo@ID:...) as a hardening measure against a
+                # renamed/deleted repo's old name being reused, so match with
+                # wildcards rather than an exact org/repo string.
                 token.actions.githubusercontent.com:sub:
-                  - !Sub repo:${GitHubOrg}/${GitHubRepo}:environment:${AllowedEnvironment}
-                  - !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${AllowedBranch}
+                  - !Sub repo:${GitHubOrg}*/${GitHubRepo}*:environment:${AllowedEnvironment}
+                  - !Sub repo:${GitHubOrg}*/${GitHubRepo}*:ref:refs/heads/${AllowedBranch}
       Policies:
         - PolicyName: deploy-expense-splitter-via-ssm
           PolicyDocument:
