@@ -47,3 +47,7 @@ database), and each test gets it truncated and reseeded fresh — see
 
 Override the target Postgres with `INTEGRATION_DATABASE_URL` (e.g. for
 CI, or a non-default port).
+
+Also runs in CI, in the `integration-and-e2e` job of
+`.github/workflows/ci-cd.yml`, on every push and pull request — see
+[`_docs/release-process.md`](../../_docs/release-process.md).

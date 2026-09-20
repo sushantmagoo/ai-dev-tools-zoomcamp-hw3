@@ -19,10 +19,13 @@ e2e/               Playwright end-to-end tests, run against docker-compose.dev.y
 openapi.yaml       API contract the frontend and backend both implement
 docker-compose.yml       Prod: Postgres + backend (serves the built frontend)
 docker-compose.dev.yml   Dev: Postgres + hot-reload backend + Vite frontend
-infra/cloudformation/    AWS deployment (CloudFormation + EC2) — see STEPS.md
+infra/cloudformation/    AWS deployment (CloudFormation + EC2)
+.github/workflows/ci-cd.yml  Test + deploy pipeline — see _docs/deployment.md
 Makefile           Shortcuts for everything below
 _docs/spec.md      Original product scope
 _docs/testing.md   How the four test layers fit together
+_docs/deployment.md        CI/CD architecture and one-time setup
+_docs/release-process.md   How releases/rollbacks actually work
 ```
 
 ## Quick start
@@ -94,9 +97,9 @@ DATABASE_URL=postgresql://ledger:ledger@localhost:5432/ledger
 
 ## Running everything in Docker
 
-Two separate Compose files, since dev and prod run different topologies (a
-hot-reload backend + a separate Vite dev server, vs. one image that serves
-both) — see [`STEPS.md`](STEPS.md) for why.
+Two separate Compose files, since dev and prod run different topologies: a
+hot-reload backend + a separate Vite dev server in dev, vs. one image that
+serves both in prod.
 
 **Prod** (`docker-compose.yml`, `backend/Dockerfile`): the backend image
 builds the frontend and serves the static build itself, so there's a single
@@ -152,6 +155,28 @@ together.
 make e2e-install   # one-time: npm install + download the Playwright browser
 make e2e           # reset the dev stack, run the suite, tear it down
 ```
+
+## Deployment & CI/CD
+
+Prod runs on a single AWS EC2 instance, provisioned via CloudFormation
+(`infra/cloudformation/ec2-stack.yaml`) — the same `docker-compose.yml`
+from above, just running on AWS instead of a laptop.
+
+`.github/workflows/ci-cd.yml` runs the frontend/backend unit suites in
+parallel, then integration + e2e against a built `docker-compose.dev.yml`
+stack, then — on a successful push to `master` — deploys the new code to
+that EC2 instance via SSM Run Command, authenticating to AWS through
+GitHub's OIDC provider (no stored AWS keys), and finally checks
+`/healthz` to confirm the deploy actually worked.
+
+- [`infra/cloudformation/README.md`](infra/cloudformation/README.md) —
+  the CloudFormation templates and their deploy/teardown commands.
+- [`_docs/deployment.md`](_docs/deployment.md) — the architecture: why
+  infra provisioning and app deployment are separate concerns, the
+  OIDC/SSM trust model, one-time setup.
+- [`_docs/release-process.md`](_docs/release-process.md) — the day-to-day
+  process: what triggers what, required checks, watching a deploy, and
+  rollback.
 
 ## Scope
 

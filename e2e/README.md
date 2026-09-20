@@ -72,3 +72,7 @@ make e2e-run       # just runs the tests against whatever's up right now
 Override the target URLs (e.g. against a non-default port or a deployed
 environment) with `FRONTEND_URL` / `BACKEND_URL` env vars — see
 `tests/helpers.js`.
+
+Also runs in CI, in the `integration-and-e2e` job of
+`.github/workflows/ci-cd.yml`, on every push and pull request — see
+[`_docs/release-process.md`](../_docs/release-process.md).

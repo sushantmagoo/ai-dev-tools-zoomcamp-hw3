@@ -5,8 +5,13 @@ runs its production `docker-compose.yml` (Postgres + the backend, which
 serves the built frontend on port 8000) — the same stack `make docker-up`
 runs locally, just on AWS.
 
-See [`STEPS.md`](../../STEPS.md) for the full step-by-step walkthrough this
-was designed against. This file is the quick reference.
+`github-oidc-role.yaml` provisions the IAM role the CI/CD pipeline assumes
+(via GitHub's OIDC provider, no stored AWS keys) to redeploy new code to
+that instance on every push to `master` — see
+[`../../_docs/deployment.md`](../../_docs/deployment.md) for how the two fit
+together and [`../../_docs/release-process.md`](../../_docs/release-process.md)
+for the day-to-day process. This file is the quick command reference for
+both templates.
 
 ## What it creates
 
@@ -21,7 +26,7 @@ It does **not** create a VPC/subnet (you supply an existing one — your
 account's default VPC works) or set up HTTPS/a domain — see "Not covered"
 below.
 
-## Deploy
+## Deploy the app instance
 
 ```bash
 aws cloudformation deploy \
@@ -31,15 +36,21 @@ aws cloudformation deploy \
       VpcId=vpc-xxxxxxxx \
       SubnetId=subnet-xxxxxxxx \
       KeyPairName=your-key-pair \
-      SSHLocationCidr=YOUR_IP/32
+      SSHLocationCidr=YOUR_IP/32 \
+  --capabilities CAPABILITY_IAM
 ```
+
+(`CAPABILITY_IAM` is required because the template creates an IAM role for
+the instance — that's what lets the CI/CD pipeline redeploy it later via
+SSM instead of SSH.)
 
 Finding a `VpcId`/`SubnetId`: `aws ec2 describe-subnets --filters
 Name=default-for-az,Values=true --query 'Subnets[0].[VpcId,SubnetId]'`
 returns a default-VPC public subnet.
 
-Then, once the stack finishes (a few minutes for `UserData` to build the
-images afterwards — see STEPS.md for how to watch that):
+This returns once the *instance* exists (a minute or two) — it does not
+wait for `UserData` to finish installing Docker and building the app
+images, which takes a few minutes longer. Then:
 
 ```bash
 aws cloudformation describe-stacks --stack-name expense-splitter \
@@ -47,12 +58,41 @@ aws cloudformation describe-stacks --stack-name expense-splitter \
 ```
 
 `AppUrl` is what you open in a browser; `SSHCommand` is how you get on the
-box to check `docker compose logs` if it's not up yet.
+box to check `docker compose logs` if it's not up yet (or
+`tail -f /var/log/user-data.log` for the boot script's own log).
+
+## Deploy the CI/CD role (one-time, enables automated deploys)
+
+```bash
+aws cloudformation deploy \
+  --template-file infra/cloudformation/github-oidc-role.yaml \
+  --stack-name expense-splitter-github-oidc \
+  --parameter-overrides \
+      GitHubOrg=your-github-org-or-username \
+      GitHubRepo=your-repo-name \
+  --capabilities CAPABILITY_IAM
+```
+
+Add `CreateOidcProvider=false` if your AWS account already has a GitHub
+OIDC provider registered (an account can only have one per URL). Then:
+
+```bash
+aws cloudformation describe-stacks --stack-name expense-splitter-github-oidc \
+  --query 'Stacks[0].Outputs[0].OutputValue' --output text
+```
+
+Store that role ARN as a GitHub **environment** secret named
+`AWS_DEPLOY_ROLE_ARN` on an environment named `production`
+(**Settings → Environments**) — see
+[`../../_docs/deployment.md`](../../_docs/deployment.md) for why an
+environment secret specifically, and what the role can/can't do.
 
 ## Update / redeploy new code
 
 `UserData` only runs on first boot, so a `git push` doesn't automatically
-reach the instance. SSH in and:
+reach the instance — unless the CI/CD pipeline is set up (the previous
+section), which does exactly this on every push to `master`. Manually, SSH
+in and:
 
 ```bash
 cd /opt/app && git pull && docker compose up -d --build
@@ -67,6 +107,13 @@ aws cloudformation delete-stack --stack-name expense-splitter
 This deletes the instance, its EBS volume, the Elastic IP, and the
 security group — and with them, the Postgres data (it lives in a Docker
 volume on that instance's disk, not anywhere durable across instances).
+
+If you also set up the CI/CD role, it has no ongoing cost but there's no
+reason to leave an unused IAM role around:
+
+```bash
+aws cloudformation delete-stack --stack-name expense-splitter-github-oidc
+```
 
 ## Not covered (documented limitations, not oversights)
 

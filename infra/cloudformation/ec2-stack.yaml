@@ -2,7 +2,8 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
   Expense Splitter — single EC2 instance running the app's production
   docker-compose.yml (Postgres + backend, which serves the built frontend).
-  See infra/cloudformation/README.md and STEPS.md for how to deploy this.
+  Creates an IAM role, so deploys/updates need --capabilities CAPABILITY_IAM.
+  See infra/cloudformation/README.md for how to deploy this.
 
 Parameters:
   VpcId:
@@ -48,6 +49,28 @@ Parameters:
     Description: Resolved via SSM at deploy time — always the latest Amazon Linux 2023 AMI for the target region, so no region-specific AMI id needs hardcoding here.
 
 Resources:
+  AppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Name
+          Value: expense-splitter
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref AppInstanceRole
+
   AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -77,6 +100,7 @@ Resources:
       SubnetId: !Ref SubnetId
       SecurityGroupIds:
         - !Ref AppSecurityGroup
+      IamInstanceProfile: !Ref AppInstanceProfile
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
