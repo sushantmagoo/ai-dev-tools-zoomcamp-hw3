@@ -184,3 +184,9 @@ See [`_docs/spec.md`](_docs/spec.md) for the original product scope. Notably:
 fixed-amount splits only (no percentages/shares), no recurring expenses, no
 group-wide debt simplification (balances are tracked strictly pairwise), and
 no passwords.
+
+
+## Live URL (IP)
+```
+http://32.194.253.73:8000
+```

@@ -18,7 +18,24 @@ Parameters:
   AllowedBranch:
     Type: String
     Default: master
-    Description: Only a workflow run triggered by a push to this branch can assume the role.
+    Description: >-
+      Allows a plain push/workflow_dispatch run on this branch to assume
+      the role (used only if the deploy job doesn't specify a GitHub
+      Environment). Kept alongside AllowedEnvironment below for either
+      shape of trust claim GitHub can issue.
+
+  AllowedEnvironment:
+    Type: String
+    Default: production
+    Description: >-
+      GitHub Environment name the deploy job runs under (ci-cd.yml's
+      `deploy` job sets `environment: production`). When a job specifies
+      an environment, GitHub's OIDC token `sub` claim becomes
+      repo:<org>/<repo>:environment:<name> instead of the branch-ref form
+      above — this is what actually needs to match for that job. Restrict
+      *which branch* can deploy via this environment's own "Deployment
+      branches and tags" setting in the GitHub repo (Settings ->
+      Environments -> production), not via this role.
 
   AppStackName:
     Type: String
@@ -69,7 +86,9 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${AllowedBranch}
+                token.actions.githubusercontent.com:sub:
+                  - !Sub repo:${GitHubOrg}/${GitHubRepo}:environment:${AllowedEnvironment}
+                  - !Sub repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${AllowedBranch}
       Policies:
         - PolicyName: deploy-expense-splitter-via-ssm
           PolicyDocument:
