@@ -1,5 +1,5 @@
 .PHONY: help install install-backend install-frontend dev backend frontend \
-	test test-backend test-frontend clean \
+	test test-backend test-frontend test-integration clean \
 	db-up db-down db-logs docker-build docker-up docker-down docker-logs \
 	docker-build-dev docker-up-dev docker-down-dev docker-logs-dev \
 	e2e-install e2e e2e-run
@@ -39,6 +39,9 @@ test-backend: ## Run the backend test suite (pytest)
 
 test-frontend: ## Run the frontend test suite (vitest)
 	cd frontend && npm test
+
+test-integration: db-up ## Run integration tests against a real Postgres (no browser, needs Postgres up)
+	backend/.venv/bin/pytest test/integration -q
 
 db-up: ## Start just the Postgres container (see backend/.env.example to point local dev at it)
 	docker compose -f docker-compose.dev.yml up -d postgres

@@ -12,14 +12,16 @@ as.
 ## Project layout
 
 ```
-frontend/    React + Vite SPA
-backend/     FastAPI service (SQLAlchemy ORM, SQLite/Postgres)
-e2e/         Playwright end-to-end tests, run against docker-compose.dev.yml
-openapi.yaml API contract the frontend and backend both implement
+frontend/          React + Vite SPA
+backend/           FastAPI service (SQLAlchemy ORM, SQLite/Postgres)
+test/integration/  Backend + real-Postgres integration tests (pytest)
+e2e/               Playwright end-to-end tests, run against docker-compose.dev.yml
+openapi.yaml       API contract the frontend and backend both implement
 docker-compose.yml       Prod: Postgres + backend (serves the built frontend)
 docker-compose.dev.yml   Dev: Postgres + hot-reload backend + Vite frontend
-Makefile     Shortcuts for everything below
-_docs/spec.md   Original product scope
+Makefile           Shortcuts for everything below
+_docs/spec.md      Original product scope
+_docs/testing.md   How the four test layers fit together
 ```
 
 ## Quick start
@@ -32,9 +34,9 @@ make dev       # runs backend (:8000) and frontend (:5173) together
 ```
 
 Open **http://localhost:5173**. `Ctrl+C` stops both servers. Run `make help`
-to see every available command, or `make test` to run both test suites
-(unit-level only — see [End-to-end tests](#end-to-end-tests) below for the
-Docker-based integration suite).
+to see every available command, or `make test` to run both unit test
+suites — see [`_docs/testing.md`](_docs/testing.md) for the integration
+and end-to-end suites too.
 
 ## Frontend
 
@@ -124,12 +126,26 @@ To run just a Postgres container for local (non-Docker) dev, use
 `make db-up` / `make db-down` instead — this now points at
 `docker-compose.dev.yml`.
 
+## Integration tests
+
+`test/integration/` runs the backend's pytest suite against a real,
+disposable Postgres database instead of the in-memory SQLite used by
+`backend/tests/` — see [`test/integration/README.md`](test/integration/README.md)
+for what that catches (it already found a real bug — see there).
+
+```bash
+make db-up             # start Postgres, if it isn't already
+make test-integration
+```
+
 ## End-to-end tests
 
 `e2e/` holds a Playwright suite that runs against a real, running
 `docker-compose.dev.yml` stack (real browser, real Vite proxy, real
 FastAPI, real Postgres) — see [`e2e/README.md`](e2e/README.md) for what it
-covers and why it's separate from the unit-level suites above.
+covers and why it's separate from the suites above, or
+[`_docs/testing.md`](_docs/testing.md) for how all four test layers fit
+together.
 
 ```bash
 make e2e-install   # one-time: npm install + download the Playwright browser

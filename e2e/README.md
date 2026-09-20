@@ -9,11 +9,17 @@ deliberately different from:
   mocked API, no browser or network involved.
 - `backend/tests/` (pytest) — router tests against a disposable in-memory
   SQLite database via FastAPI's `TestClient`, no real HTTP or Postgres.
+- `test/integration/` (pytest) — same shape as `backend/tests/`, but
+  against a real Postgres instead of SQLite. Still no real HTTP, browser,
+  or container networking.
 
-Neither of those catches problems in how the pieces are actually wired
+None of those catch problems in how the pieces are actually wired
 together — a broken Vite proxy target, a container that can't reach
 Postgres, an env var that isn't passed through, a CORS header that's fine
 in-process but wrong over real HTTP. That's what this suite is for.
+
+See [`_docs/testing.md`](../_docs/testing.md) for how all four test
+layers fit together.
 
 ## Scenarios covered
 
